@@ -12,6 +12,7 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tsconfig/svelte": "^5.0.8",
+    "@types/file-saver": "^2.0.7",
     "@types/node": "^24.13.3",
     "@types/verovio": "^5.1.0",
     "svelte": "^5.57.0",
@@ -20,6 +21,7 @@
     "vite": "^8.3.0"
   },
   "dependencies": {
+    "file-saver": "^2.0.5",
     "pyodide": "^314.0.7",
     "verovio": "^6.3.0"
   }

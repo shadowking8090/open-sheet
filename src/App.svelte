@@ -1,89 +1,113 @@
-<script>
-  import svelteLogo from './assets/svelte.svg'
-  import viteLogo from './assets/vite.svg'
-  import heroImg from './assets/hero.png'
-  import Counter from './lib/Counter.svelte'
+<script lang="ts">
+  import type { Score } from './models/score';
+  import { saveAs } from 'file-saver';
+  import { onMount } from 'svelte';
+  import createVerovioModule from 'verovio/wasm';
+  import { VerovioToolkit } from 'verovio/esm';
+
+  let notationHTML = '';
+  let toolkit: VerovioToolkit
+
+  onMount(async () => {
+    const VerovioModule = await createVerovioModule();
+    toolkit = new VerovioToolkit(VerovioModule);
+    console.log('Verovio has loaded!');
+
+    const response = await fetch(
+      'https://www.verovio.org/examples/downloads/Schubert_Lindenbaum.mei'
+    );
+    const meiXML = await response.text();
+
+    toolkit.setOptions({
+      scale: 50,
+      landscape: true,
+      adjustPageWidth: true
+    });
+
+    let rests = document.querySelectorAll('g.rest');
+    
+    console.log("Verovio options:", toolkit.getOptions())
+
+    toolkit.loadData(meiXML);
+    notationHTML = toolkit.renderToSVG(1);
+  });
+
+  let currentPage = 1;
+
+  const testScore: Score = {
+    title: 'My First Melody',
+    measures: [
+      {
+        notes: [
+          { id: 'n1', pitch: 'C4', duration: 'quarter' },
+          { id: 'n2', pitch: 'E4', duration: 'quarter' },
+          { id: 'n3', pitch: 'G4', duration: 'half' }
+        ]
+      }
+    ]
+  };
+
+  console.log(testScore);
+  
+  function saveMEI() {
+    const meiContent = toolkit.getMEI();
+    const myBlob = new Blob([meiContent], { type: 'application/xml' });
+    saveAs(myBlob, 'meifile.mei');
+  }
+
+  function playMIDIHandler(){
+    const base64midi = toolkit.renderToMIDI();
+    const midiString = 'data:audio/midi;base64,' + base64midi;
+    MIDIjs.player_callback = midiHighlightHandler;
+    MIDIjs.play(midiString)
+  }
+
+  function stopMIDIHandler(){
+    MIDIjs.stop();
+  }
+
+  function midiHighlightHandler(event: {time: number}) {
+
+    const playingNotes = document.querySelectorAll('g.note.playing');
+    for (const playingNote of playingNotes){
+      playingNote.classList.remove('playing');
+    }
+
+    const currentElements = toolkit.getElementsAtTime(event.time * 1000);
+    
+    if (currentElements.page == 0){
+      return;
+    }
+
+    if (currentElements.page != currentPage) {
+      currentPage = currentElements.page;
+      notationHTML = toolkit.renderToSVG(currentPage)
+    }
+
+    for (const note of currentElements.notes){
+      const noteElement = document.getElementById(note);
+      if (noteElement){
+        noteElement.classList.add('playing');
+      }
+    }
+  }
 </script>
 
-<section id="center">
-  <div class="hero">
-    <img src={heroImg} class="base" width="170" height="179" alt="" />
-    <img src={svelteLogo} class="framework" alt="Svelte logo" />
-    <img src={viteLogo} class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/App.svelte</code> and save to test <code>HMR</code></p>
-  </div>
-  <Counter />
-</section>
+<h1>Hello Verovio!</h1>
+<div id="notation">{@html notationHTML}
+  <button on:click={playMIDIHandler}>Play</button>
+  <button on:click={stopMIDIHandler}>Stop</button>
+  <button on:click={saveMEI}>Save as MEI </button>  
+</div>
 
-<div class="ticks"></div>
+<style>
+  #notation :global(g.rest){
+    fill: crimson;
+    color: crimson;
+  }
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true">
-      <use href="/icons.svg#documentation-icon"></use>
-    </svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank" rel="noreferrer">
-          <img class="logo" src={viteLogo} alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://svelte.dev/" target="_blank" rel="noreferrer">
-          <img class="button-icon" src={svelteLogo} alt="" />
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true">
-      <use href="/icons.svg#social-icon"></use>
-    </svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li>
-        <a href="https://github.com/vitejs/vite" target="_blank" rel="noreferrer">
-          <svg class="button-icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#github-icon"></use>
-          </svg>
-          GitHub
-        </a>
-      </li>
-      <li>
-        <a href="https://chat.vite.dev/" target="_blank" rel="noreferrer">
-          <svg class="button-icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#discord-icon"></use>
-          </svg>
-          Discord
-        </a>
-      </li>
-      <li>
-        <a href="https://x.com/vite_js" target="_blank" rel="noreferrer">
-          <svg class="button-icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#x-icon"></use>
-          </svg>
-          X.com
-        </a>
-      </li>
-      <li>
-        <a href="https://bsky.app/profile/vite.dev" target="_blank" rel="noreferrer">
-          <svg class="button-icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#bluesky-icon"></use>
-          </svg>
-          Bluesky
-        </a>
-      </li>
-    </ul>
-  </div>
-</section>
-
-<div class="ticks"></div>
-<section id="spacer"></section>
+  #notation :global(g.note.playing){
+    fill: cornflowerblue;
+    color: cornflowerblue;
+  }
+</style>
