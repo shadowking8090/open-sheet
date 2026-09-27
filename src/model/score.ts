@@ -1,9 +1,10 @@
-export type Duration = 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth';
+export type Duration = 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth' | 'thirtysecond';
 
 export interface Note {
   id: string;
-  pitch: string;      // e.g. "C4", "F#5"
+  pitch: string | null;  
   duration: Duration;
+  dots?: number;
 }
 
 export interface Measure {
