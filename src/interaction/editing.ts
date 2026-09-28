@@ -11,7 +11,7 @@
     return null
   }
 
-  const PITCH_ORDER = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+   export const PITCH_ORDER = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
   export function transposePitch(pitch: string, direction: 1 | -1): string {
     const step = pitch[0]

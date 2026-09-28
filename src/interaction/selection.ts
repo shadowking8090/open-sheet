@@ -9,3 +9,4 @@ export function selectNoteFromClick(event: MouseEvent): string | null {
   noteGroup.classList.add('selected');
   return noteGroup.id;
 }
+
