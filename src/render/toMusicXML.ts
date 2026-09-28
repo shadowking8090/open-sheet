@@ -1,32 +1,19 @@
 import type { Score, Note, Duration } from '../model/score';
+   import { TICKS_PER_QUARTER, durationTicks, timeSignatureAt } from '../model/duration';
+
+// MusicXML's own names for each note length (they don't always match ours).
+const XML_TYPE: Record<Duration, string> = {
+  whole: 'whole',
+  half: 'half',
+  quarter: 'quarter',
+  eighth: 'eighth',
+  sixteenth: '16th',
+  thirtysecond: '32nd'
+};
 
 // Splits "C4" into { step: "C", octave: 4 }
 function parsePitch(pitch: string): { step: string; octave: number } {
-  const step = pitch[0];
-  const octave = parseInt(pitch.slice(1), 10);
-  return { step, octave };
-}
-
-// Maps our duration names to MusicXML's expected values + divisions count
-const DIVISIONS_PER_QUARTER = 16;
-
-const DURATION_TABLE: Record<Duration, { type: string; divisions: number }> = {
-  whole:     { type: 'whole',     divisions: DIVISIONS_PER_QUARTER * 4 },
-  half:      { type: 'half',      divisions: DIVISIONS_PER_QUARTER * 2 },
-  quarter:   { type: 'quarter',   divisions: DIVISIONS_PER_QUARTER },
-  eighth:    { type: 'eighth',    divisions: DIVISIONS_PER_QUARTER / 2 },
-  sixteenth: { type: '16th', divisions: DIVISIONS_PER_QUARTER / 4 },
-  thirtysecond: { type: '32nd', divisions: DIVISIONS_PER_QUARTER / 8}
-};
-
-function durationInfo(duration: Duration) {
-  return DURATION_TABLE[duration];
-}
-
-function dotMultiplier(dots: number): number {
-  if (dots === 2) return 1.75;
-  if (dots === 1) return 1.5;
-  return 1;
+  return { step: pitch[0], octave: parseInt(pitch.slice(1), 10) };
 }
 
 function pitchOrRestXML(pitch: string | null): string {
@@ -36,37 +23,40 @@ function pitchOrRestXML(pitch: string | null): string {
 }
 
 function noteToXML(note: Note): string {
-  const { type, divisions } = durationInfo(note.duration);
   const dots = note.dots ?? 0;
 
   return `
     <note id="${note.id}">
       ${pitchOrRestXML(note.pitch)}
-      <duration>${divisions * dotMultiplier(dots)}</duration>
-      <type>${type}</type>
+      <duration>${durationTicks(note.duration, dots)}</duration>
+      <type>${XML_TYPE[note.duration]}</type>
       ${'<dot/>'.repeat(dots)}
     </note>`;
 }
 
+// Clef, time signature, and rhythm resolution. Written once, in the first measure.
+function attributesXML(score: Score): string {
+  const { beats, beatType } = timeSignatureAt(score, 0);
+
+  return `
+      <attributes>
+        <divisions>${TICKS_PER_QUARTER}</divisions>
+        <time><beats>${beats}</beats><beat-type>${beatType}</beat-type></time>
+        <clef><sign>G</sign><line>2</line></clef>
+      </attributes>`;
+}
+
+function measureToXML(score: Score, measureIndex: number): string {
+  const notesXML = score.measures[measureIndex].notes.map(noteToXML).join('');
+  const attributes = measureIndex === 0 ? attributesXML(score) : '';
+
+  return `
+    <measure number="${measureIndex + 1}">${attributes}${notesXML}
+    </measure>`;
+}
 
 export function scoreToMusicXML(score: Score): string {
-  const measuresXML = score.measures
-    .map((measure, index) => {
-      const notesXML = measure.notes.map(noteToXML).join('');
-      return `
-    <measure number="${index + 1}">
-      ${index === 0 ? `
-      <attributes>
-        <divisions>${DIVISIONS_PER_QUARTER}</divisions>
-        <clef>
-          <sign>G</sign>
-          <line>2</line>
-        </clef>
-      </attributes>` : ''}
-      ${notesXML}
-    </measure>`;
-    })
-    .join('');
+  const measuresXML = score.measures.map((_, index) => measureToXML(score, index)).join('');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <score-partwise version="4.0">

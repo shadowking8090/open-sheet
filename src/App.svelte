@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { measureRemaining } from './model/duration';
   import { onMount, onDestroy } from 'svelte';
   import type { VerovioToolkit } from 'verovio/esm';
   import type { Duration } from './model/score';
@@ -8,7 +9,7 @@
   import { playMIDI, stopMIDI } from './render/midi';
   import { loadFileIntoToolkit, downloadMEI } from './io/files';
   import { selectNoteFromClick } from './interaction/selection';
-  import { findNoteById, transposePitch, addNote, replaceWithRest } from './interaction/editing';
+  import { findNoteById, transposePitch, addNote, replaceWithRest, addMeasure } from './interaction/editing';
   import { measureUnderCursor, staffLineYs, snappedY, lineSpacingOf } from './interaction/hover';
   import GhostNote from './ui/GhostNote.svelte';
   import Toolbar from './ui/Toolbar.svelte';
@@ -29,6 +30,7 @@
     toolkit = await initVerovio();
     rerenderScore();
     window.addEventListener('keydown', handleKeydown);
+    console.log('remaining:', measureRemaining(testScore, 0));
   });
 
   onDestroy(() => {
@@ -135,6 +137,11 @@
     notationHTML = toolkit.renderToSVG(currentPage);
   }
 
+  function addMeasureToScore() {
+  addMeasure(testScore);
+  refreshAfterEdit();
+}
+
 </script>
 
 <h1>Hello Anna Chiv!</h1>
@@ -144,6 +151,7 @@
   <button on:click={stopMIDI}>Stop</button>
   <button on:click={() => downloadMEI(toolkit)}>Save as MEI</button>
   <button on:click={addToolNote}>Add Note</button>
+  <button on:click={addMeasureToScore}>Add Measure</button>
   <input type="file" accept=".mei,.xml,.musicxml,.mxl" on:change={handleFileUpload} />
 </div>
 

@@ -13,5 +13,11 @@ export interface Measure {
 
 export interface Score {
   title: string;
+  timeSignature: TimeSignature;
   measures: Measure[];
+}
+
+export interface TimeSignature {
+  beats: number;
+  beatType: number;
 }

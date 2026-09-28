@@ -1,4 +1,5 @@
   import type { Duration, Note, Score } from "../model/score";
+  import { measureCapacity, timeSignatureAt, restsToFill } from '../model/duration';
   
   export function findNoteById(score: Score, id: string): Note | null {
     for (const measure of score.measures){
@@ -34,9 +35,16 @@
     return PITCH_ORDER[index] + newOctave
   }
 
+  let idCounter = 0;
+
+  // Guaranteed unique even when called many times in the same millisecond.
+  export function newNoteId(): string {
+    return `n${Date.now()}_${idCounter++}`;
+  }
+
   export function addNote(score: Score, pitch: string | null, duration: Duration, dots?: number): Note {
     const newNote: Note = {
-      id: `n${Date.now()}`,
+      id: newNoteId(),
       pitch,
       duration,
       dots
@@ -57,3 +65,17 @@
 
     note.pitch = null
   }
+
+  // Adds a measure filled with rests (a whole rest in 4/4).
+export function addMeasure(score: Score): void {
+  const capacity = measureCapacity(timeSignatureAt(score, score.measures.length));
+
+  const notes: Note[] = restsToFill(capacity).map(({ duration, dots }) => ({
+    id: newNoteId(),
+    pitch: null,
+    duration,
+    dots
+  }));
+
+  score.measures.push({ notes });
+}
