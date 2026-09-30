@@ -173,3 +173,18 @@ export function addNote(score: Score, pitch: string | null, duration: Duration, 
 
   return placeNote(score, lastIndex, startTick, pitch, duration, dots)!;
 }
+
+export function findNotePosition(score: Score, id: string): { measureIndex: number; tick: number } | null {
+  for (let measureIndex = 0; measureIndex < score.measures.length; measureIndex++) {
+    const measure = score.measures[measureIndex]
+    let tick = 0
+
+    for (const note of measure.notes) {
+      if (note.id === id) {
+        return {measureIndex, tick};
+      }
+      tick += durationTicks(note.duration, note.dots);
+    }
+  }
+  return null;
+}

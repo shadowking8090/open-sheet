@@ -9,7 +9,7 @@ import { initVerovio } from './render/verovio';
 import { playMIDI, stopMIDI } from './render/midi';
 import { loadFileIntoToolkit, downloadMEI } from './io/files';
 import { selectNoteFromClick } from './interaction/selection';
-import { findNoteById, transposePitch, addNote, replaceWithRest, addMeasure } from './interaction/editing';
+import { findNoteById, transposePitch, addNote, replaceWithRest, addMeasure, findNotePosition, placeNote } from './interaction/editing';
 import Toolbar from './ui/Toolbar.svelte';
 import { activateMeasure, type Cursor } from './interaction/cursor';
 import { measureUnderCursor } from './interaction/hover';
@@ -27,6 +27,8 @@ let toolIsRest = false;
 let cursor: Cursor | null = null
 
 let activeMeasureBox: { x: number; y: number; width: number; height: number } | null = null;
+
+let previewKey = '';
 
 onMount(async () => {
   toolkit = await initVerovio();
@@ -59,6 +61,34 @@ function reapplyActiveMeasure() {
     if (measureElement) {
       updateActiveMeasureBox(measureElement);
     }
+  });
+}
+
+function showPreview() {
+  if (!cursor) {
+    return;
+  }
+
+  const pitch = toolIsRest ? null : 'C4'; // pitch will come from the mouse later
+  const key = `${cursor.measureIndex}|${cursor.tick}|${pitch}|${toolDuration}|${toolDots}`;
+
+  if (key === previewKey) {
+    return;
+  }
+  previewKey = key;
+
+  const previewScore = structuredClone(testScore);
+  const placed = placeNote(previewScore, cursor.measureIndex, cursor.tick, pitch, toolDuration, toolDots);
+
+  if (!placed) {
+    return;
+  }
+
+  toolkit.loadData(scoreToMusicXML(previewScore));
+  notationHTML = toolkit.renderToSVG(currentPage);
+
+  requestAnimationFrame(() => {
+    document.getElementById(placed.id)?.classList.add('preview-note');
   });
 }
 
@@ -107,11 +137,25 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
+function handleMouseMove(event: MouseEvent) {
+  showPreview();
+}
+
 function handleNoteClick(event: MouseEvent) {
   const id = selectNoteFromClick(event);
   
   if (id){
     selectedNoteId = id;
+    
+    const position = findNotePosition(testScore, id);
+    if (position) {
+      cursor = { measureIndex: position.measureIndex, tick: position.tick};
+
+      const measureElement = document.getElementById(`m${position.measureIndex}`);
+      if (measureElement) {
+        updateActiveMeasureBox(measureElement);
+      }
+    }
     return;
   }
 
@@ -182,6 +226,7 @@ function handleMeasureClick(event: MouseEvent) {
 <div
   id="notation"
   on:click={handleNoteClick}
+  on:mousemove={handleMouseMove}
 >{@html notationHTML}</div>
 
 {#if activeMeasureBox}
@@ -203,9 +248,12 @@ function handleMeasureClick(event: MouseEvent) {
     fill: green;
     color: green;
   }
+  #notation :global(g.note.preview-note) {
+    opacity: 0.4;
+  }
   .active-measure-highlight {
   position: fixed;
   background: rgba(0, 100, 255, 0.08);
   pointer-events: none;
-}
+  }
 </style>
