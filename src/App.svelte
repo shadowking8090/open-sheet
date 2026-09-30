@@ -10,8 +10,6 @@
   import { loadFileIntoToolkit, downloadMEI } from './io/files';
   import { selectNoteFromClick } from './interaction/selection';
   import { findNoteById, transposePitch, addNote, replaceWithRest, addMeasure } from './interaction/editing';
-  import { measureUnderCursor, staffLineYs, snappedY, lineSpacingOf } from './interaction/hover';
-  import GhostNote from './ui/GhostNote.svelte';
   import Toolbar from './ui/Toolbar.svelte';
 
   let toolkit: VerovioToolkit;
@@ -24,13 +22,10 @@
   let toolDots = 0;
   let toolIsRest = false;
 
-  let ghost: { x: number; y: number; size: number } | null = null;
-
   onMount(async () => {
     toolkit = await initVerovio();
     rerenderScore();
     window.addEventListener('keydown', handleKeydown);
-    console.log('remaining:', measureRemaining(testScore, 0));
   });
 
   onDestroy(() => {
@@ -97,27 +92,6 @@
     if (id) selectedNoteId = id;
   }
 
-  function handleMouseMove(event: MouseEvent) {
-    const container = event.currentTarget as HTMLElement;
-    const measure = measureUnderCursor(container, event);
-    const lineYs = measure ? staffLineYs(measure) : [];
-
-    if (lineYs.length !== 5) {
-      ghost = null;
-      return;
-    }
-
-    ghost = {
-      x: event.clientX,
-      y: snappedY(event.clientY, lineYs),
-      size: lineSpacingOf(lineYs)
-    };
-  }
-
-  function handleMouseLeave() {
-    ghost = null;
-  }
-
   function handlePlay() {
     playMIDI(toolkit, {
       getCurrentPage: () => currentPage,
@@ -162,20 +136,7 @@
 <div
   id="notation"
   on:click={handleNoteClick}
-  on:mousemove={handleMouseMove}
-  on:mouseleave={handleMouseLeave}
 >{@html notationHTML}</div>
-
-{#if ghost}
-  <GhostNote
-    x={ghost.x}
-    y={ghost.y}
-    size={ghost.size}
-    duration={toolDuration}
-    dots={toolDots}
-    isRest={toolIsRest}
-  />
-{/if}
 
 <style>
   #notation :global(g.note.playing) {
