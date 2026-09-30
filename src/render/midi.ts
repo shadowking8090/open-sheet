@@ -16,21 +16,33 @@ export function stopMIDI() {
   MIDIjs.stop();
 }
 
+const PLAYING_SELECTOR = 'g.note.playing, g.rest.playing';
+
 function clearPlayingHighlight() {
-  document.querySelectorAll('g.note.playing').forEach(el => el.classList.remove('playing'));
+  document.querySelectorAll(PLAYING_SELECTOR).forEach(el => el.classList.remove('playing'));
 }
 
 function highlightPlayingNotes(seconds: number, toolkit: VerovioToolkit, callbacks: PlaybackCallbacks) {
   clearPlayingHighlight();
 
-  const current = toolkit.getElementsAtTime(seconds * 1000); // Verovio wants milliseconds
+  // Verovio's type definitions are missing "rests", even though the toolkit
+  // returns them at runtime. This cast adds the field back so we can use it.
+  const current = toolkit.getElementsAtTime(seconds * 1000) as {
+    page: number;
+    notes: string[];
+    rests: string[];
+  };
+
   if (current.page === 0) return;
 
   if (current.page !== callbacks.getCurrentPage()) {
     callbacks.onPageChange(current.page);
   }
 
-  for (const noteId of current.notes) {
-    document.getElementById(noteId)?.classList.add('playing');
+  for (const id of current.notes) {
+    document.getElementById(id)?.classList.add('playing');
+  }
+  for (const id of current.rests) {
+    document.getElementById(id)?.classList.add('playing');
   }
 }

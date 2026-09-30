@@ -16,18 +16,24 @@ function parsePitch(pitch: string): { step: string; octave: number } {
   return { step: pitch[0], octave: parseInt(pitch.slice(1), 10) };
 }
 
-function pitchOrRestXML(pitch: string | null): string {
-  if (pitch === null) return '<rest/>';
+function pitchOrRestXML(pitch: string | null, isFullMeasureRest: boolean): string {
+  if (pitch === null) {
+    if (isFullMeasureRest) {
+      return '<rest measure="yes"/>';
+    }
+    return '<rest/>';
+  }
+
   const { step, octave } = parsePitch(pitch);
   return `<pitch><step>${step}</step><octave>${octave}</octave></pitch>`;
 }
 
-function noteToXML(note: Note): string {
+function noteToXML(note: Note, isFullMeasureRest: boolean): string {
   const dots = note.dots ?? 0;
 
   return `
     <note id="${note.id}">
-      ${pitchOrRestXML(note.pitch)}
+      ${pitchOrRestXML(note.pitch, isFullMeasureRest)}
       <duration>${durationTicks(note.duration, dots)}</duration>
       <type>${XML_TYPE[note.duration]}</type>
       ${'<dot/>'.repeat(dots)}
@@ -47,11 +53,17 @@ function attributesXML(score: Score): string {
 }
 
 function measureToXML(score: Score, measureIndex: number): string {
-  const notesXML = score.measures[measureIndex].notes.map(noteToXML).join('');
+  const measure = score.measures[measureIndex];
+  const isSingleRest = measure.notes.length === 1 && measure.notes[0].pitch === null;
+
+  const notesXML = measure.notes
+    .map(note => noteToXML(note, isSingleRest))
+    .join('');
+
   const attributes = measureIndex === 0 ? attributesXML(score) : '';
 
   return `
-    <measure number="${measureIndex + 1}">${attributes}${notesXML}
+    <measure number="${measureIndex + 1}" id="m${measureIndex}">${attributes}${notesXML}
     </measure>`;
 }
 
