@@ -16,8 +16,10 @@
   import Toolbar from "./ui/Toolbar.svelte";
   import {measureCapacity,lastNoteEndTick,durationTicks} from "./model/duration";
   import {leftCenterOf,isWithinDistance,type Point} from "./interaction/placement";
+  import type { KeySignature } from './model/score';
 
   let toolkit: VerovioToolkit;
+
   let notationHTML = "";  
   let currentPage = 1;
 
@@ -32,6 +34,9 @@
 
   let activeMeasureBox: Box | null = null;
   let previewKey = ""; // skips re-rendering the preview when nothing changed
+
+  let keySignature: KeySignature = testScore.keySignature;
+
 
   onMount(async () => {
     toolkit = await initVerovio();
@@ -66,6 +71,7 @@
       updateCursorTarget();
     });
   }
+  
 
   function refreshAfterEdit() {
     rerenderScore();
@@ -303,6 +309,14 @@ function advanceToNextMeasure(currentMeasureIndex: number) {
     currentPage = 1;
     notationHTML = toolkit.renderToSVG(currentPage);
   }
+
+  function handleKeyChange(newKey: KeySignature) {
+    keySignature = newKey;
+    testScore.keySignature = newKey;
+    refreshAfterEdit();
+  }
+
+
 </script>
 
 <h1>Hello Anna Chiv!</h1>
@@ -324,6 +338,8 @@ function advanceToNextMeasure(currentMeasureIndex: number) {
   bind:duration={toolDuration}
   bind:dots={toolDots}
   bind:isRest={toolIsRest}
+  keySignature={keySignature}
+  onKeyChange={handleKeyChange}
 />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->

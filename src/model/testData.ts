@@ -6,6 +6,7 @@ export const testScore: Score = {
     beats: 4,
     beatType: 4
   },
+  keySignature: { fifths: 1 },
   measures: [
     { notes: [{ id: 'r1', pitch: null, duration: 'whole', dots: 0 }] },
     { notes: [{ id: 'r2', pitch: null, duration: 'whole', dots: 0 }] },

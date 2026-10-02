@@ -1,10 +1,13 @@
 <script lang="ts">
-  import type { Duration } from '../model/score';
+  import type { Duration, KeySignature } from '../model/score';
+  import { KEY_SIGNATURES } from '../model/score';
 
   // Passed in by the parent. With bind:, changes flow back up to the parent too.
   export let duration: Duration;
   export let dots: number;
   export let isRest: boolean;
+  export let keySignature: KeySignature;
+  export let onKeyChange: (newKey: KeySignature) => void;
 
   // Adding a new duration to the dropdown means adding one line here.
   const DURATION_OPTIONS: { value: Duration; label: string }[] = [
@@ -40,5 +43,17 @@
   <label>
     <input type="checkbox" checked={dots > 0} on:change={setDotted} />
     Dotted
+  </label>
+
+  <label>
+    Key:
+    <select
+      value={keySignature.fifths}
+      on:change={(e) => onKeyChange({ fifths: parseInt(e.currentTarget.value, 10) })}
+    >
+      {#each KEY_SIGNATURES as key}
+        <option value={key.fifths}>{key.name}</option>
+      {/each}
+    </select>
   </label>
 </div>

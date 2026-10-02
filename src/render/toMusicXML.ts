@@ -43,10 +43,12 @@ function noteToXML(note: Note, isFullMeasureRest: boolean): string {
 // Clef, time signature, and rhythm resolution. Written once, in the first measure.
 function attributesXML(score: Score): string {
   const { beats, beatType } = timeSignatureAt(score, 0);
+  const { fifths } = score.keySignature;
 
   return `
       <attributes>
         <divisions>${TICKS_PER_QUARTER}</divisions>
+        <key><fifths>${fifths}</fifths></key>
         <time><beats>${beats}</beats><beat-type>${beatType}</beat-type></time>
         <clef><sign>G</sign><line>2</line></clef>
       </attributes>`;
