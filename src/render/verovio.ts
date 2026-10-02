@@ -3,12 +3,12 @@ import createVerovioModule from 'verovio/wasm';
 import { VerovioToolkit } from 'verovio/esm';
 
 export async function initVerovio(): Promise<VerovioToolkit> {
-  const VerovioModule = await createVerovioModule();
-  const toolkit = new VerovioToolkit(VerovioModule);
+  const toolkit = new VerovioToolkit(await createVerovioModule());
   toolkit.setOptions({
     scale: 60,
-    landscape: true,
-    adjustPageWidth: true
+    pageWidth: 2100,
+    pageHeight: 10000, 
+    adjustPageHeight: true
   });
   return toolkit;
 }

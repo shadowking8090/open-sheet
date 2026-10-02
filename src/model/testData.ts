@@ -7,15 +7,9 @@ export const testScore: Score = {
     beatType: 4
   },
   measures: [
-    {
-      notes: [
-        { id: 'n1', pitch: 'C4', duration: 'quarter' },
-        { id: 'n2', pitch: 'E4', duration: 'eighth' },
-        { id: 'n3', pitch: 'G4', duration: 'eighth' },
-        { id: 'n4', pitch: 'G4', duration: 'eighth' },
-        { id: 'n5', pitch: 'E4', duration: 'eighth' },
-        { id: 'n6', pitch: 'C4', duration: 'quarter' },
-      ]
-    }
+    { notes: [{ id: 'r1', pitch: null, duration: 'whole', dots: 0 }] },
+    { notes: [{ id: 'r2', pitch: null, duration: 'whole', dots: 0 }] },
+    { notes: [{ id: 'r3', pitch: null, duration: 'whole', dots: 0 }] },
+    { notes: [{ id: 'r4', pitch: null, duration: 'whole', dots: 0 }] }
   ]
 };

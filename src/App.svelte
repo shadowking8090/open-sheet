@@ -1,46 +1,46 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import type { VerovioToolkit } from 'verovio/esm';
-  import type { Duration } from './model/score';
-  import { testScore } from './model/testData';
-  import { scoreToMusicXML } from './render/toMusicXML';
-  import { initVerovio } from './render/verovio';
-  import { renderPreview } from './interaction/preview';
-  import { playMIDI, stopMIDI } from './render/midi';
-  import { loadFileIntoToolkit, downloadMEI } from './io/files';
-  import { selectNoteFromClick } from './interaction/selection';
-  import {findNoteById, transposePitch, addNote, replaceWithRest, addMeasure, noteIdAtTick, placeNote} from './interaction/editing';
-  import { activateMeasure, type Cursor } from './interaction/cursor';
-  import { measureUnderCursor, staffLineYs, pitchAtY } from './interaction/hover';
-  import { boxOf, measureIndexFromId, type Box } from './interaction/placement';
-  import Toolbar from './ui/Toolbar.svelte';
-  import { measureCapacity, lastNoteEndTick, durationTicks } from './model/duration';
-  import { leftCenterOf, isWithinDistance, type Point } from './interaction/placement';
+  import { onMount, onDestroy } from "svelte";
+  import type { VerovioToolkit } from "verovio/esm";
+  import type { Duration } from "./model/score";
+  import { testScore } from "./model/testData";
+  import { scoreToMusicXML } from "./render/toMusicXML";
+  import { initVerovio } from "./render/verovio";
+  import { renderPreview } from "./interaction/preview";
+  import { playMIDI, stopMIDI } from "./render/midi";
+  import { loadFileIntoToolkit, downloadMEI } from "./io/files";
+  import { selectNoteFromClick } from "./interaction/selection";
+  import {findNoteById,transposePitch,addNote,replaceWithRest,addMeasure,noteIdAtTick,placeNote} from "./interaction/editing";
+  import { activateMeasure, type Cursor } from "./interaction/cursor";
+  import {measureUnderCursor,staffLineYs,pitchAtY} from "./interaction/hover";
+  import { boxOf, measureIndexFromId, type Box } from "./interaction/placement";
+  import Toolbar from "./ui/Toolbar.svelte";
+  import {measureCapacity,lastNoteEndTick,durationTicks} from "./model/duration";
+  import {leftCenterOf,isWithinDistance,type Point} from "./interaction/placement";
 
   let toolkit: VerovioToolkit;
-  let notationHTML = '';
+  let notationHTML = "";  
   let currentPage = 1;
 
   let selectedNoteId: string | null = null;
 
-  let toolDuration: Duration = 'quarter';
+  let toolDuration: Duration = "quarter";
   let toolDots = 0;
   let toolIsRest = false;
 
   let cursor: Cursor | null = null;
   let cursorTarget: Point | null = null;
-  
+
   let activeMeasureBox: Box | null = null;
-  let previewKey = ''; // skips re-rendering the preview when nothing changed
+  let previewKey = ""; // skips re-rendering the preview when nothing changed
 
   onMount(async () => {
     toolkit = await initVerovio();
     rerenderScore();
-    window.addEventListener('keydown', handleKeydown);
+    window.addEventListener("keydown", handleKeydown);
   });
 
   onDestroy(() => {
-    window.removeEventListener('keydown', handleKeydown);
+    window.removeEventListener("keydown", handleKeydown);
   });
 
   // ============ Rendering ============
@@ -52,7 +52,7 @@
   function reapplySelection() {
     if (!selectedNoteId) return;
     requestAnimationFrame(() => {
-      document.getElementById(selectedNoteId!)?.classList.add('selected');
+      document.getElementById(selectedNoteId!)?.classList.add("selected");
     });
   }
 
@@ -65,7 +65,7 @@
       if (measureElement) activeMeasureBox = boxOf(measureElement);
       updateCursorTarget();
     });
-}
+  }
 
   function refreshAfterEdit() {
     rerenderScore();
@@ -81,13 +81,20 @@
     previewKey = key;
 
     const result = renderPreview(
-      toolkit, testScore, currentPage, cursor.measureIndex, cursor.tick, pitch, toolDuration, toolDots
+      toolkit,
+      testScore,
+      currentPage,
+      cursor.measureIndex,
+      cursor.tick,
+      pitch,
+      toolDuration,
+      toolDots,
     );
     if (!result) return;
 
     notationHTML = result.svg;
     requestAnimationFrame(() => {
-      document.getElementById(result.noteId)?.classList.add('preview-note');
+      document.getElementById(result.noteId)?.classList.add("preview-note");
     });
   }
 
@@ -106,7 +113,7 @@
   }
 
   function addToolNote() {
-    const pitch = toolIsRest ? null : 'C4';
+    const pitch = toolIsRest ? null : "C4";
     const newNote = addNote(testScore, pitch, toolDuration, toolDots);
     selectedNoteId = newNote.id;
     refreshAfterEdit();
@@ -117,31 +124,50 @@
     refreshAfterEdit();
   }
 
-  function placeAtCursor(pitch: string | null) {
+function placeAtCursor(pitch: string | null) {
   if (!cursor) return;
 
   const placed = placeNote(testScore, cursor.measureIndex, cursor.tick, pitch, toolDuration, toolDots);
   if (!placed) return;
 
-  const placedLength = durationTicks(toolDuration, toolDots);
-  cursor = { measureIndex: cursor.measureIndex, tick: cursor.tick + placedLength };
-
   selectedNoteId = placed.id;
+
+  const placedLength = durationTicks(toolDuration, toolDots);
+  const newTick = cursor.tick + placedLength;
+  const capacity = measureCapacity(testScore.timeSignature);
+
+  if (newTick >= capacity) {
+    advanceToNextMeasure(cursor.measureIndex);
+  } else {
+    cursor = { measureIndex: cursor.measureIndex, tick: newTick };
+  }
+
   refreshAfterEdit();
+}
+
+function advanceToNextMeasure(currentMeasureIndex: number) {
+  const nextIndex = currentMeasureIndex + 1;
+
+  if (nextIndex >= testScore.measures.length) {
+    addMeasure(testScore);
+  }
+
+  activeMeasureIndex = nextIndex;
+  cursor = { measureIndex: nextIndex, tick: 0 };
 }
 
   function handleKeydown(event: KeyboardEvent) {
     if (!selectedNoteId) return;
 
     switch (event.key) {
-      case 'Backspace':
+      case "Backspace":
         event.preventDefault(); // stop the browser's "go back" behavior
         deleteSelectedNote();
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         transposeSelectedNote(1);
         break;
-      case 'ArrowDown':
+      case "ArrowDown":
         transposeSelectedNote(-1);
         break;
     }
@@ -162,85 +188,102 @@
     handleMeasureClick(event);
   }
 
-function handleMeasureClick(event: MouseEvent) {
-  const container = event.currentTarget as HTMLElement;
-  const measureElement = measureUnderCursor(container, event);
-  if (!measureElement) return;
+  function handleMeasureClick(event: MouseEvent) {
+    const container = event.currentTarget as HTMLElement;
+    const measureElement = measureUnderCursor(container, event);
+    if (!measureElement) return;
 
-  const measureIndex = measureIndexFromId(measureElement.id);
+    const measureIndex = measureIndexFromId(measureElement.id);
 
-  // If this measure is already active and the click landed on the cursor's
-  // target spot, treat it as "place the note" rather than "re-activate".
-  if (cursor && cursor.measureIndex === measureIndex && cursorTarget) {
-    if (isWithinDistance(event.clientX, event.clientY, cursorTarget, PREVIEW_DISTANCE)) {
-      const pitch = toolIsRest ? null : pitchFromEvent(event, measureElement);
-      placeAtCursor(pitch);
+    // If this measure is already active and the click landed on the cursor's
+    // target spot, treat it as "place the note" rather than "re-activate".
+    if (cursor && cursor.measureIndex === measureIndex && cursorTarget) {
+      if (
+        isWithinDistance(
+          event.clientX,
+          event.clientY,
+          cursorTarget,
+          PREVIEW_DISTANCE,
+        )
+      ) {
+        const pitch = toolIsRest ? null : pitchFromEvent(event, measureElement);
+        placeAtCursor(pitch);
+        return;
+      }
+    }
+
+    const measure = testScore.measures[measureIndex];
+    const capacity = measureCapacity(testScore.timeSignature);
+
+    activeMeasureIndex = measureIndex;
+    activeMeasureBox = boxOf(measureElement);
+
+    if (lastNoteEndTick(measure) >= capacity) {
+      cursor = null;
+      cursorTarget = null;
       return;
     }
+
+    cursor = activateMeasure(measure, measureIndex);
+    updateCursorTarget();
   }
 
-  const measure = testScore.measures[measureIndex];
-  const capacity = measureCapacity(testScore.timeSignature);
-
-  activeMeasureIndex = measureIndex;
-  activeMeasureBox = boxOf(measureElement);
-
-  if (lastNoteEndTick(measure) >= capacity) {
-    cursor = null;
-    cursorTarget = null;
-    return;
+  function pitchFromEvent(
+    event: MouseEvent,
+    measureElement: Element,
+  ): string | null {
+    const lineYs = staffLineYs(measureElement);
+    if (lineYs.length !== 5) return null;
+    return pitchAtY(event.clientY, lineYs);
   }
-
-  cursor = activateMeasure(measure, measureIndex);
-  updateCursorTarget();
-}
-
-function pitchFromEvent(event: MouseEvent, measureElement: Element): string | null {
-  const lineYs = staffLineYs(measureElement);
-  if (lineYs.length !== 5) return null;
-  return pitchAtY(event.clientY, lineYs);
-}
-function updateCursorTarget() {
-  if (!cursor) {
-    cursorTarget = null;
-    return;
-  }
-
-  const measure = testScore.measures[cursor.measureIndex];
-  const noteId = noteIdAtTick(measure, cursor.tick);
-  const element = noteId ? document.getElementById(noteId) : null;
-
-  cursorTarget = element ? leftCenterOf(element) : null;
-}
-
-const PREVIEW_DISTANCE = 40; // pixels
-
-function handleMouseMove(event: MouseEvent) {
-  if (!cursor || !cursorTarget) return;
-
-  if (!isWithinDistance(event.clientX, event.clientY, cursorTarget, PREVIEW_DISTANCE)) {
-    if (previewKey !== '') {
-      previewKey = '';
-      rerenderScore();
-      reapplySelection();
-      reapplyActiveMeasure();
+  function updateCursorTarget() {
+    if (!cursor) {
+      cursorTarget = null;
+      return;
     }
-    return;
+
+    const measure = testScore.measures[cursor.measureIndex];
+    const noteId = noteIdAtTick(measure, cursor.tick);
+    const element = noteId ? document.getElementById(noteId) : null;
+
+    cursorTarget = element ? leftCenterOf(element) : null;
   }
 
-  if (toolIsRest) {
-    showPreview(null);
-    return;
+  const PREVIEW_DISTANCE = 40; // pixels
+
+  function handleMouseMove(event: MouseEvent) {
+    if (!cursor || !cursorTarget) return;
+
+    if (
+      !isWithinDistance(
+        event.clientX,
+        event.clientY,
+        cursorTarget,
+        PREVIEW_DISTANCE,
+      )
+    ) {
+      if (previewKey !== "") {
+        previewKey = "";
+        rerenderScore();
+        reapplySelection();
+        reapplyActiveMeasure();
+      }
+      return;
+    }
+
+    if (toolIsRest) {
+      showPreview(null);
+      return;
+    }
+
+    const measureElement = document.getElementById(`m${cursor.measureIndex}`);
+    if (!measureElement) return;
+
+    const lineYs = staffLineYs(measureElement);
+    if (lineYs.length !== 5) return;
+
+    showPreview(pitchAtY(event.clientY, lineYs));
   }
-
-  const measureElement = document.getElementById(`m${cursor.measureIndex}`);
-  if (!measureElement) return;
-
-  const lineYs = staffLineYs(measureElement);
-  if (lineYs.length !== 5) return;
-
-  showPreview(pitchAtY(event.clientY, lineYs));
-}
 
   function handlePlay() {
     playMIDI(toolkit, {
@@ -248,7 +291,7 @@ function handleMouseMove(event: MouseEvent) {
       onPageChange: (page) => {
         currentPage = page;
         notationHTML = toolkit.renderToSVG(page);
-      }
+      },
     });
   }
 
@@ -270,18 +313,24 @@ function handleMouseMove(event: MouseEvent) {
   <button on:click={() => downloadMEI(toolkit)}>Save as MEI</button>
   <button on:click={addToolNote}>Add Note</button>
   <button on:click={addMeasureToScore}>Add Measure</button>
-  <input type="file" accept=".mei,.xml,.musicxml,.mxl" on:change={handleFileUpload} />
+  <input
+    type="file"
+    accept=".mei,.xml,.musicxml,.mxl"
+    on:change={handleFileUpload}
+  />
 </div>
 
-<Toolbar bind:duration={toolDuration} bind:dots={toolDots} bind:isRest={toolIsRest} />
+<Toolbar
+  bind:duration={toolDuration}
+  bind:dots={toolDots}
+  bind:isRest={toolIsRest}
+/>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  id="notation"
-  on:click={handleNoteClick}
-  on:mousemove={handleMouseMove}
->{@html notationHTML}</div>
+<div id="notation" on:click={handleNoteClick} on:mousemove={handleMouseMove}>
+  {@html notationHTML}
+</div>
 
 {#if activeMeasureBox}
   <div
