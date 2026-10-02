@@ -1,5 +1,5 @@
 import type { Duration, Measure, Note, Score } from "../model/score";
-import { measureCapacity, timeSignatureAt, restsToFill, durationTicks } from '../model/duration';
+import { measureCapacity, timeSignatureAt, restsToFill, durationTicks, lastNoteEndTick } from '../model/duration';
 
 
 export function findNoteById(score: Score, id: string): Note | null {
@@ -143,21 +143,6 @@ export function addMeasure(score: Score): void {
   score.measures.push({ notes: restsForGap(capacity) });
 }
 
-// Where the last real note (not a filler rest) ends, in ticks.
-function lastNoteEndTick(measure: Measure): number {
-  let tick = 0;
-  let endOfLastNote = 0;
-
-  for (const note of measure.notes) {
-    const noteEnd = tick + durationTicks(note.duration, note.dots);
-    if (note.pitch !== null) {
-      endOfLastNote = noteEnd;
-    }
-    tick = noteEnd;
-  }
-  return endOfLastNote;
-}
-
 // Temporary: appends to the end of the score. This will be replaced once
 // notes are placed by clicking a measure instead of a button.
 export function addNote(score: Score, pitch: string | null, duration: Duration, dots = 0): Note {
@@ -174,17 +159,16 @@ export function addNote(score: Score, pitch: string | null, duration: Duration, 
   return placeNote(score, lastIndex, startTick, pitch, duration, dots)!;
 }
 
-export function findNotePosition(score: Score, id: string): { measureIndex: number; tick: number } | null {
-  for (let measureIndex = 0; measureIndex < score.measures.length; measureIndex++) {
-    const measure = score.measures[measureIndex]
-    let tick = 0
+// The note or rest currently occupying a specific tick position in a measure.
+export function noteIdAtTick(measure: Measure, targetTick: number): string | null {
+  let tick = 0;
 
-    for (const note of measure.notes) {
-      if (note.id === id) {
-        return {measureIndex, tick};
-      }
-      tick += durationTicks(note.duration, note.dots);
+  for (const note of measure.notes) {
+    const noteEnd = tick + durationTicks(note.duration, note.dots);
+    if (targetTick >= tick && targetTick < noteEnd) {
+      return note.id;
     }
+    tick = noteEnd;
   }
   return null;
 }

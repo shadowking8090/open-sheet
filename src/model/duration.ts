@@ -1,5 +1,6 @@
 import type { Duration, Measure, Score, TimeSignature } from './score';
 
+
 // To compare and add up note lengths, everything is measured in "ticks".
 // A quarter note is 64 ticks, which keeps even a double-dotted 32nd a whole number.
 export const TICKS_PER_QUARTER = 64;
@@ -78,4 +79,19 @@ export function restsToFill(ticks: number): { duration: Duration; dots: number }
     }
   }
   return rests;
+}
+
+// Where the last real note (not a filler rest) ends, in ticks.
+export function lastNoteEndTick(measure: Measure): number {
+  let tick = 0;
+  let endOfLastNote = 0;
+
+  for (const note of measure.notes) {
+    const noteEnd = tick + durationTicks(note.duration, note.dots);
+    if (note.pitch !== null) {
+      endOfLastNote = noteEnd;
+    }
+    tick = noteEnd;
+  }
+  return endOfLastNote;
 }
